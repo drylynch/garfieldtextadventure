@@ -3,7 +3,6 @@
 """
 TODO
 
-make completion message show what room is now unlocked
 look into reduce code for getting user input bit - change ordering (may not be viable but could work idk)
 
 """
