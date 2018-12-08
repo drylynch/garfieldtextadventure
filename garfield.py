@@ -4,6 +4,8 @@
 TODO
 
 look into reduce code for getting user input bit - change ordering (may not be viable but could work idk)
+add ability to just type action + number to do something (eg 'm5' to move to room 5)
+        - reflect that in tutorial
 
 """
 
@@ -510,6 +512,33 @@ def main():
     clearcmd = get_clearcmd()
     player = Player('garfield', ALLROOMS[1])  # start in room 1
 
+    # tutorial time
+    print("""the year is 2004.
+you are garfield.
+you gotta clean the house.
+
+use your vaccuum cleaner to move items around.
+suck up loose items, and blow them into their proper place (their 'ghost').
+
+you can only hold 3 items at a time.
+you can store items in saveboxes for later, though.
+
+select choices by typing commands in the square brackets.
+eg:
+    to [m]ove, type
+    >>> m
+    
+    to [s]uck up this item: [69] Cool Shades
+    >>> s
+    >>> 69
+    
+not many rooms are open to start with.
+some rooms may reward keys when they're completed...
+
+god speed.
+""")
+    prompt_continue()
+
     while True:  # game loop
         if game_is_finished():
             os.system(clearcmd)
@@ -553,7 +582,7 @@ def main():
         # print actions
         print("you can:\n",
               "\t[m]ove to another room\n",
-              "\t[s]uck up an item\n",
+              "\t[s]uck up a loose item\n",
               "\t[b]low an item to it's correct place")
         if room_has_savebox:
             print("\t[d]rop something in the savebox\n",
