@@ -1,5 +1,4 @@
 # garfield's radical text adventure
-(based on a true story)
 
 based on the hit ps2/pc game from 2004
 
