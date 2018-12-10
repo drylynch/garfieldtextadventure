@@ -4,8 +4,24 @@
 TODO
 
 * make the gameloop print less ugly
-* conbery room loose junk and ghost junk to JunkTrunks
+* convert room loose junk and ghost junk to JunkTrunks
+* make Door a separate class
+    avoid duplicate info (ensure a doorway is two way, or make that an option?)
+    rooms can ask what other rooms they're connected to
+    stores locked status and key requirements for each doorway rather than each room
+    how?
+        created before rooms and passed on Room instantiation
+            ? or single object in main, that rooms ask directly
+        print doors for thisroom instead of rooms
+    problems
+        might not be able to use ChunkyTrunk, might have to make new subclass (gross)
+        how store everything?
 
+
+maybe do
+* add item requirements handling (patio light for accessing some items/doors)
+* change doors? landing door to garden is locked till attic complete, but front + back garden doors unlocked by small bedroom
+    both above handled by Door class
 * make in pygame ?
 
 """
@@ -57,22 +73,22 @@ class Room:
         :param str room_name: readable name for display
         :param list loose_junk: junk ids, items to be sucked up
         :param list ghost_junk: junk ids, items to be put back
-        :param list doors: room ids, adjacent rooms. changes to dict with items (room_id: Room) during play
+        :param list doors: room ids, adjacent rooms
         :param Room or None my_key: require this Room to be complete to unlock, or always unlocked (None)
-        :param bool rewards_key: true if rewards a key upon completion
-        :param bool has_savebox: if the room has a savebox
-        :param int savebox_capacity: max items for this rooms savebox. irrelevant if no savebox in room.
+        :param bool rewards_key: true if room rewards a key upon completion
+        :param bool has_savebox: true if room has a savebox
+        :param int savebox_capacity: max items for this rooms savebox (irrelevant if room has no savebox)
         """
         self._id = room_id
         self._name = room_name
-        self._loose_junk = {junk_id: ALLJUNKS[junk_id] for junk_id in loose_junk}  # convert junk id lists into dict with items (junk_id: Junk obj)
-        self._ghost_junk = {junk_id: ALLJUNKS[junk_id] for junk_id in ghost_junk}
+        self._loose_junk = ChunkyTrunk(loose_junk, ALLJUNKS)
+        self._ghost_junk = ChunkyTrunk(ghost_junk, ALLJUNKS)
         self._doors = doors
         self._my_key = my_key
         self._rewards_key = rewards_key
         self._has_savebox = has_savebox
         if has_savebox:
-            self._savebox = JunkTrunk(savebox_capacity)
+            self._savebox = SimpleTrunk(savebox_capacity)
         else:
             self._savebox = None
 
@@ -103,26 +119,26 @@ class Room:
 
     def place_in_room(self, junk):
         """ add an item to the room in it's ghostly place """
-        del self._ghost_junk[junk.id]
+        self._ghost_junk.remove(junk)
 
     def take_from_room(self, junk):
         """ remove a loose item from the room """
-        del self._loose_junk[junk.id]
+        self._loose_junk.remove(junk)
 
     def ghosts_complete(self):
-        """ return true if room is complete (all ghosts filled) """
-        return len(self._ghost_junk) == 0
+        """ return true if no more ghost items (room is complete) """
+        return self._ghost_junk.is_empty()
 
     def loose_complete(self):
         """ true if no more loose objects """
-        return len(self._loose_junk) == 0
+        return self._loose_junk.is_empty()
 
-    def cheat(self):
-        """ >:( """
-        if self._has_savebox:
-            self._savebox = JunkTrunk(0)
-        self._loose_junk = {}
-        self._ghost_junk = {}
+    # def cheat(self):
+    #     """ >:( """
+    #     if self._has_savebox:
+    #         self._savebox = SimpleTrunk(None)
+    #     self._loose_junk = ChunkyTrunk(None, None)
+    #     self._ghost_junk = ChunkyTrunk(None, None)
 
     @property
     def id(self):
@@ -160,9 +176,14 @@ class Room:
 class Player:
     """ you! """
     def __init__(self, player_name, starting_room, vaccuum_capacity):
+        """
+        :param str player_name: cool name
+        :param Room starting_room: room the player begins in
+        :param int vaccuum_capacity: how much stuff the player can hold at once
+        """
         self._name = player_name
-        self._location = starting_room  # Room obj
-        self._vaccuum = JunkTrunk(vaccuum_capacity)
+        self._location = starting_room
+        self._vaccuum = SimpleTrunk(vaccuum_capacity)
 
     def __str__(self):
         return self._name
@@ -180,7 +201,7 @@ class Player:
         return self._vaccuum.contains(junk)
 
     def move(self, room):
-        """ moves the player's current location to room at given room id """
+        """ moves the player's current location to given Room """
         if room in self._location.doors.values():
             self._location = room
 
@@ -188,7 +209,7 @@ class Player:
         """ suck up an item from the current room to vaccuum """
         if not self.vaccuum_full():
             self._location.take_from_room(junk)  # take from room
-            self._vaccuum.store(junk)  # give to vaccuum
+            self._vaccuum.insert(junk)  # give to vaccuum
 
     def blow(self, junk):
         """ blow an item from vaccuum to the current room """
@@ -200,18 +221,18 @@ class Player:
         """ drop an item in the savebox of the current room """
         if self.vaccuum_contains(junk) and self._location.has_savebox and not self._location.savebox.is_full():
             self._vaccuum.remove(junk)  # take from vaccuum
-            self._location.savebox.store(junk)  # give to savebox
+            self._location.savebox.insert(junk)  # give to savebox
 
     def grab(self, junk):
         """ grab an item out of the savebox in the current room """
         if self._location.has_savebox and self._location.savebox.contains(junk):
             self._location.savebox.remove(junk)  # take from savebox
-            self._vaccuum.store(junk)  # give to vaccuum
+            self._vaccuum.insert(junk)  # give to vaccuum
 
-    def cheat(self):
-        """ >:( """
-        self._vaccuum = JunkTrunk(0)
-        self._name = 'big cheater boy'  # >:)
+    # def cheat(self):
+    #     """ >:( """
+    #     self._vaccuum = SimpleTrunk(None)
+    #     self._name = 'big cheater boy'  # >:)
 
     @property
     def location(self):
@@ -222,42 +243,73 @@ class Player:
         return self._vaccuum
 
 
-class JunkTrunk:
-    """ a container (or 'trunk') for items (also known as 'junk') """
-    def __init__(self, capacity):
-        self._contents = {}  # (junk_id: Junk obj)
-        self._capacity = capacity
+class _BaseTrunk:
+    """
+        dict-based item container to map an object to its corresponding id, eg (obj.id: obj)
+    """
+    def __init__(self):
+        self._contents = {}
 
-    def get(self, junk_id):
-        """ return the Junk obj for junk_id, or None if not found """
-        return self._contents.get(junk_id, None)
+    def get(self, obj_id):
+        """ return obj with the given id, or None if not found """
+        return self._contents.get(obj_id, None)
 
     def contents(self):
-        """ poop out list of Junk objs """
+        """ return list of objs """
         return self._contents.values()
 
-    def contains(self, junk):
-        """ true if contains junk """
-        return junk in self._contents.values()
+    def contains(self, obj):
+        """ return true if contains obj """
+        return obj.id in self._contents
 
-    def store(self, junk):
-        """ plop something in """
-        if not self.is_full():
-            self._contents[junk.id] = junk
-
-    def remove(self, junk):
+    def remove(self, obj):
         """ yank something out """
-        if junk.id in self._contents:
-            del self._contents[junk.id]
+        del self._contents[obj.id]
 
     def is_empty(self):
-        return len(self._contents) == 0
-
-    def is_full(self):
-        return len(self._contents) == self._capacity
+        return self.length() == 0
 
     def length(self):
         return len(self._contents)
+
+
+class SimpleTrunk(_BaseTrunk):
+    """
+        small, limited, user-interactable Trunk
+        holds only junk objects
+        can insert and remove items
+        used for player vaccuum and saveboxes
+    """
+    def __init__(self, capacity):
+        """
+        :param int capacity: max number of items that can be held by this trunk
+        """
+        super().__init__()
+        self._capacity = capacity
+
+    def is_full(self):
+        """ true if at capacity """
+        return self.length() == self._capacity
+
+    def insert(self, junk):
+        """ plop something in """
+        self._contents[junk.id] = junk
+
+
+class ChunkyTrunk(_BaseTrunk):
+    """
+        large, unlimited, pre-filled Trunk
+        holds both junk and room objects
+        can only remove items
+        used to reflect room state and doors
+    """
+    def __init__(self, contents_keys, contents_map):
+        """
+        :param list contents_keys: keys to map onto values
+        :param dict contents_map: map of (key: value) to use for lookup
+        """
+        super().__init__()
+        self._contents = {key: contents_map[key] for key in contents_keys}
 
 
 def prompt_input_both():
@@ -270,7 +322,7 @@ def prompt_input_both():
 
         only returns just action or both, not just choice (that's what prompt_input_choice() is for)
         missing choice is replaced with None
-        (None, None) means completely invalid input
+        return (None, None) on completely invalid input
 
     """
     s = input(INPUT_PROMPT).strip()
@@ -313,21 +365,6 @@ def prompt_continue(message=None):
         input(INPUT_PROMPT + message + '\n' + default)
 
 
-def game_is_finished():
-    """ return true if all rooms are complete, else false """
-    for room in ALLROOMS.values():
-        if not room.ghosts_complete():  # any room is incomplete, not done
-            return False
-    return True  # all rooms complete, done
-
-
-def cheat_game(cheater):
-    """ all of the glory, none of the sport """
-    for room in ALLROOMS.values():
-        room.cheat()
-    cheater.cheat()
-
-
 def is_int(s):
     """ true if int, false otherwise """
     try:
@@ -335,6 +372,21 @@ def is_int(s):
         return True
     except ValueError:
         return False
+
+
+def game_is_finished():
+    """ return true if all rooms are complete, else false """
+    for room in ALLROOMS.values():
+        if not room.ghosts_complete():  # any room is incomplete, not done
+            return False
+    return True  # all rooms complete, game is finished
+
+
+# def cheat_game(cheating_player):
+#     """ all of the glory, none of the sport """
+#     for room in ALLROOMS.values():
+#         room.cheat()
+#     cheating_player.cheat()
 
 
 def get_clearcmd():
@@ -484,7 +536,7 @@ def init():
              6: RoomData(name='Upstairs Landing',
                          loose_junk=[117, 129, 187, 191],
                          ghost_junk=[117, 146, 154, 189],
-                         doors=[12, 3, 7, 8, 10, 14, 12],
+                         doors=[12, 3, 7, 8, 10, 14, 13],
                          my_key=None,
                          rewards_key=True,
                          has_savebox=False,
@@ -602,15 +654,15 @@ def main():
  eg:
      to [m]ove, type
      >>> m
-    
+
      to [s]uck up this item: [69] Cool Shades
      >>> s
      >>> 69
-    
+
      or, all at once
      >>> s69   ->   suck up item 69
      >>> m13   ->   move to room 13
-    
+
  not many rooms are open to start with.
  some rooms may reward keys when they're completed...
 
@@ -647,7 +699,7 @@ def main():
                 print(*thisroom.savebox.contents(), sep=', ')
         print('-' * nicelinelen)
         print('| loose items:', end='\n|\t')
-        print(*thisroom.loose_junk.values(), sep='\n|\t')
+        print(*thisroom.loose_junk.contents(), sep='\n|\t')
         print('| ghost items:', end='\n|\t')
         if thisroom.ghosts_complete():
             print('- room is complete! -', end='')
@@ -655,7 +707,7 @@ def main():
                 print('\n|\t - you found a key! -', end='')
             print()
         else:
-            print(*thisroom.ghost_junk.values(), sep='\n|\t')
+            print(*thisroom.ghost_junk.contents(), sep='\n|\t')
         print('-' * nicelinelen)
 
         # print actions
@@ -672,9 +724,9 @@ def main():
         if action is None:  # nothing entered
             continue  # pretend it didn't happen and ask again
 
-        # for babies
-        elif action == 'z' and choice == 69800813569:
-            cheat_game(player)
+        # # for babies
+        # elif action == 'z' and choice == 69800813569:
+        #     cheat_game(player)
 
         # move room
         elif action == 'm':
@@ -682,7 +734,7 @@ def main():
                 choice = prompt_input_choice('where do you want to go?')
                 if choice == INPUT_QUIT_CHAR:  # quit
                     continue
-            room = thisroom.doors.get(choice, None)
+            room = thisroom.doors.get(choice)
             if room:
                 if room.unlocked():
                     player.move(room)
@@ -702,9 +754,9 @@ def main():
                     choice = prompt_input_choice('what item do you want to suck up?')
                     if choice == INPUT_QUIT_CHAR:
                         continue
-                junk = thisroom.loose_junk.get(choice, None)
+                junk = thisroom.loose_junk.get(choice)
                 if junk:
-                    player.suck(junk)  # ;)
+                    player.suck(junk)  # ;^)
                 else:
                     prompt_continue("NOPE: that item isn't in the room!")
 
@@ -720,8 +772,8 @@ def main():
                         continue
                 junk = player.vaccuum.get(choice)
                 if junk:  # choice in vaccuum
-                    if junk in thisroom.ghost_junk.values():  # choice has ghost in room
-                        player.blow(junk)
+                    if thisroom.ghost_junk.contains(junk):  # choice has ghost in room
+                        player.blow(junk)  # ;^))))
                     else:
                         prompt_continue("NOPE: this room doesn't need that item!")
                 else:
@@ -733,7 +785,7 @@ def main():
                 if player.vaccuum_empty():  # nothing to drop
                     prompt_continue('NOPE: you have no items! suck some up first.')
                 elif thisroom.savebox.is_full():  # no room to drop
-                    prompt_continue('NOPE: this savebox is full! blow down some items, or find another box.')
+                    prompt_continue('NOPE: this savebox is full! grab some items from it first, or find another box.')
                 else:
                     if choice is None:
                         choice = prompt_input_choice('what item do you want to drop into the savebox?')
@@ -741,7 +793,7 @@ def main():
                             continue
                     junk = player.vaccuum.get(choice)
                     if junk:
-                        player.drop(junk)
+                        player.drop(junk)  # :^( ?
                     else:
                         prompt_continue("NOPE: you don't have that item!")
 
@@ -757,7 +809,7 @@ def main():
                             continue
                     junk = thisroom.savebox.get(choice)
                     if junk:
-                        player.grab(junk)
+                        player.grab(junk)  # :o)
                     else:
                         prompt_continue("NOPE: that item isn't in this savebox!")
 
