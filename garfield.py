@@ -17,11 +17,12 @@ TODO
         might not be able to use ChunkyTrunk, might have to make new subclass (gross)
         how store everything?
 
-
 maybe do
 * add item requirements handling (patio light for accessing some items/doors)
+        - or just split garden into gardens + roof
+            might not work cause that means attic needs to be cleared to get access to roof,
+            need to iterate and change the game (move items, rooms, unlock sequence) or not implement
 * change doors? landing door to garden is locked till attic complete, but front + back garden doors unlocked by small bedroom
-    both above handled by Door class
 * make in pygame ?
 
 """
@@ -133,13 +134,6 @@ class Room:
         """ true if no more loose objects """
         return self._loose_junk.is_empty()
 
-    # def cheat(self):
-    #     """ >:( """
-    #     if self._has_savebox:
-    #         self._savebox = SimpleTrunk(None)
-    #     self._loose_junk = ChunkyTrunk(None, None)
-    #     self._ghost_junk = ChunkyTrunk(None, None)
-
     @property
     def id(self):
         return self._id
@@ -202,37 +196,27 @@ class Player:
 
     def move(self, room):
         """ moves the player's current location to given Room """
-        if room in self._location.doors.values():
-            self._location = room
+        self._location = room
 
     def suck(self, junk):
         """ suck up an item from the current room to vaccuum """
-        if not self.vaccuum_full():
-            self._location.take_from_room(junk)  # take from room
-            self._vaccuum.insert(junk)  # give to vaccuum
+        self._location.take_from_room(junk)  # take from room
+        self._vaccuum.insert(junk)  # give to vaccuum
 
     def blow(self, junk):
         """ blow an item from vaccuum to the current room """
-        if self.vaccuum_contains(junk):
-            self._vaccuum.remove(junk)  # take from vaccuum
-            self._location.place_in_room(junk)  # give to room
+        self._vaccuum.remove(junk)  # take from vaccuum
+        self._location.place_in_room(junk)  # give to room
 
     def drop(self, junk):
         """ drop an item in the savebox of the current room """
-        if self.vaccuum_contains(junk) and self._location.has_savebox and not self._location.savebox.is_full():
-            self._vaccuum.remove(junk)  # take from vaccuum
-            self._location.savebox.insert(junk)  # give to savebox
+        self._vaccuum.remove(junk)  # take from vaccuum
+        self._location.savebox.insert(junk)  # give to savebox
 
     def grab(self, junk):
         """ grab an item out of the savebox in the current room """
-        if self._location.has_savebox and self._location.savebox.contains(junk):
-            self._location.savebox.remove(junk)  # take from savebox
-            self._vaccuum.insert(junk)  # give to vaccuum
-
-    # def cheat(self):
-    #     """ >:( """
-    #     self._vaccuum = SimpleTrunk(None)
-    #     self._name = 'big cheater boy'  # >:)
+        self._location.savebox.remove(junk)  # take from savebox
+        self._vaccuum.insert(junk)  # give to vaccuum
 
     @property
     def location(self):
@@ -382,13 +366,6 @@ def game_is_finished():
     return True  # all rooms complete, game is finished
 
 
-# def cheat_game(cheating_player):
-#     """ all of the glory, none of the sport """
-#     for room in ALLROOMS.values():
-#         room.cheat()
-#     cheating_player.cheat()
-
-
 def get_clearcmd():
     """ returns the command to clear the screen on the current os """
     if platform.system() == 'Windows':
@@ -398,7 +375,7 @@ def get_clearcmd():
 
 def init():
     """ start her up boys """
-    RoomData = collections.namedtuple('RData', ['name', 'loose_junk', 'ghost_junk', 'doors', 'my_key', 'rewards_key', 'has_savebox', 'savebox_capacity'])
+    RoomData = collections.namedtuple('RoomData', ['name', 'loose_junk', 'ghost_junk', 'doors', 'my_key', 'rewards_key', 'has_savebox', 'savebox_capacity'])
     junk = {100: '10kg Weight',  # id: name
             101: 'Alarm Clock',
             102: 'Animal Bed',
@@ -498,7 +475,7 @@ def init():
                          ghost_junk=[126, 127, 133, 150, 160, 170, 178],  # list of int junk ids
                          doors=[2, 5],  # list of int room ids
                          my_key=None,  # int room id, or None
-                         rewards_key=True,
+                         rewards_key=True,  # just to show notification to player that they got a key when they complete this room
                          has_savebox=False,
                          savebox_capacity=None),
              2: RoomData(name='Kitchen',
