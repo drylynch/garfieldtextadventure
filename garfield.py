@@ -17,9 +17,9 @@ text based clone of garfield, released pc and ps2, 2004 by hip games
 
 garfield has to clean the house up cause odie fucked it or something
 
-move garfield around the house with his trusty vaccuum cleaner and put items back where they belong
+move garfield around the house with his trusty vacuum cleaner and put items back where they belong
 can suck up stray items and blow them back to their rightful place, or store them in save boxes for later
-max of 3 items in the vaccuum at any one time, max of 20 items in each save box
+max of 3 items in the vacuum at any one time, max of 20 items in each save box
 """
 
 
@@ -171,62 +171,62 @@ class Room:
 class Player:
     """ you! """
 
-    def __init__(self, player_name, starting_room, vaccuum_capacity):
+    def __init__(self, player_name, starting_room, vacuum_capacity):
         """
         :param str player_name: cool name
         :param Room starting_room: room the player begins in
-        :param int vaccuum_capacity: how much stuff the player can hold at once
+        :param int vacuum_capacity: how much stuff the player can hold at once
         """
         self._name = player_name
         self._location = starting_room
-        self._vaccuum = SimpleTrunk(vaccuum_capacity)
+        self._vacuum = SimpleTrunk(vacuum_capacity)
 
     def __str__(self):
         return self._name
 
-    def vaccuum_full(self):
-        """ true if vaccuum is at capacity """
-        return self._vaccuum.is_full()
+    def vacuum_full(self):
+        """ true if vacuum is at capacity """
+        return self._vacuum.is_full()
 
-    def vaccuum_empty(self):
-        """ true if vaccuum is empty """
-        return self._vaccuum.is_empty()
+    def vacuum_empty(self):
+        """ true if vacuum is empty """
+        return self._vacuum.is_empty()
 
-    def vaccuum_contains(self, junk):
-        """ true if vaccuum contains junk """
-        return self._vaccuum.contains(junk)
+    def vacuum_contains(self, junk):
+        """ true if vacuum contains junk """
+        return self._vacuum.contains(junk)
 
-    def vaccuum_contents(self):
-        """ return list of junk in vaccuum """
-        return self._vaccuum.contents()
+    def vacuum_contents(self):
+        """ return list of junk in vacuum """
+        return self._vacuum.contents()
 
-    def vaccuum_get(self, junk_id):
-        """ get junk obj with junk_id from vaccuum, None if not found """
-        return self._vaccuum.get(junk_id)
+    def vacuum_get(self, junk_id):
+        """ get junk obj with junk_id from vacuum, None if not found """
+        return self._vacuum.get(junk_id)
 
     def move(self, room):
         """ moves the player's current location to given Room """
         self._location = room
 
     def suck(self, junk):
-        """ suck up an item from the current room to vaccuum """
+        """ suck up an item from the current room to vacuum """
         self._location.take_from_room(junk)  # take from room
-        self._vaccuum.insert(junk)  # give to vaccuum
+        self._vacuum.insert(junk)  # give to vacuum
 
     def blow(self, junk):
-        """ blow an item from vaccuum to the current room """
-        self._vaccuum.remove(junk)  # take from vaccuum
+        """ blow an item from vacuum to the current room """
+        self._vacuum.remove(junk)  # take from vacuum
         self._location.place_in_room(junk)  # give to room
 
     def drop(self, junk):
         """ drop an item in the savebox of the current room """
-        self._vaccuum.remove(junk)  # take from vaccuum
+        self._vacuum.remove(junk)  # take from vacuum
         self._location.savebox.insert(junk)  # give to savebox
 
     def grab(self, junk):
         """ grab an item out of the savebox in the current room """
         self._location.savebox.remove(junk)  # take from savebox
-        self._vaccuum.insert(junk)  # give to vaccuum
+        self._vacuum.insert(junk)  # give to vacuum
 
     @property
     def location(self):
@@ -270,7 +270,7 @@ class SimpleTrunk(_BaseTrunk):
         small, limited, user-interactable Trunk
         holds only junk objects
         can insert and remove items
-        used for player vaccuum and saveboxes
+        used for player vacuum and saveboxes
     """
 
     def __init__(self, capacity):
@@ -635,7 +635,7 @@ def main():
  you are garfield.
  you gotta clean the house.
 
- use your vaccuum cleaner to move items around.
+ use your vacuum cleaner to move items around.
  suck up loose items, and blow them into their proper place (their 'ghost').
 
  you can only hold 3 items at a time.
@@ -675,11 +675,11 @@ def main():
         print('\n| connected rooms: ', end='')
         print(*thisroom.doors.values(), sep=', ')
         print('-' * nicelinelen)
-        print('| your vaccuum:    ', end='')
-        if player.vaccuum_empty():
+        print('| your vacuum:    ', end='')
+        if player.vacuum_empty():
             print('- empty -')
         else:
-            print(*player.vaccuum_contents(), sep=', ')
+            print(*player.vacuum_contents(), sep=', ')
         if room_has_savebox:
             print('|      savebox:    ', end='')
             if thisroom.savebox.is_empty():
@@ -730,7 +730,7 @@ def main():
 
         # suck up item
         elif action == 's':
-            if player.vaccuum_full():  # too much succ
+            if player.vacuum_full():  # too much succ
                 prompt_continue('NOPE: you have no room for items! blow or drop what you have first.')
             elif thisroom.loose_complete():  # nothing to succ
                 prompt_continue('NOPE: there are no items here to suck up! there must be some elsewhere...')
@@ -746,7 +746,7 @@ def main():
                     prompt_continue("NOPE: that item isn't in the room!")
 
         elif action == 'b':
-            if player.vaccuum_empty():  # nothing to blow
+            if player.vacuum_empty():  # nothing to blow
                 prompt_continue('NOPE: you have no items! suck some up first.')
             elif thisroom.needs_complete():  # room doesn't need any items
                 prompt_continue('NOPE: this room is complete! there must be other rooms that need items...')
@@ -755,8 +755,8 @@ def main():
                     choice = prompt_input_choice('what item do you want to blow down?')
                     if choice == INPUT_QUIT_CHAR:
                         continue
-                junk = player.vaccuum_get(choice)
-                if junk is not None:  # choice in vaccuum
+                junk = player.vacuum_get(choice)
+                if junk is not None:  # choice in vacuum
                     if thisroom.still_needs(junk):  # choice has ghost in room
                         player.blow(junk)  # ;^))))
                     else:
@@ -767,7 +767,7 @@ def main():
         elif room_has_savebox:
 
             if action == 'd':
-                if player.vaccuum_empty():  # nothing to drop
+                if player.vacuum_empty():  # nothing to drop
                     prompt_continue('NOPE: you have no items! suck some up first.')
                 elif thisroom.savebox.is_full():  # no room to drop
                     prompt_continue('NOPE: this savebox is full! grab some items from it first, or find another box.')
@@ -776,15 +776,15 @@ def main():
                         choice = prompt_input_choice('what item do you want to drop into the savebox?')
                         if choice == INPUT_QUIT_CHAR:
                             continue
-                    junk = player.vaccuum_get(choice)
+                    junk = player.vacuum_get(choice)
                     if junk is not None:
                         player.drop(junk)  # :^( ?
                     else:
                         prompt_continue("NOPE: you don't have that item!")
 
             elif action == 'g':
-                if player.vaccuum_full():  # no room for items
-                    prompt_continue("NOPE: your vaccuum is full! drop some off first.")
+                if player.vacuum_full():  # no room for items
+                    prompt_continue("NOPE: your vacuum is full! drop some off first.")
                 elif thisroom.savebox.is_empty():  # nothing to grab
                     prompt_continue("NOPE: this savebox is empty! drop some items in first.")
                 else:
